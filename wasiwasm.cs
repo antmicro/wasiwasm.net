@@ -37,64 +37,63 @@ static class Program
     public static int fd_fdstat_get(int fd, int addr) {
         dbgmsg(string.Format("{0}, 0x{1:X}", fd, addr));
         if (fd <= 2) { // stdin,out,err
-		        Marshal.WriteInt64(memory.Start + addr, 2); // type = char dev
-		        Marshal.WriteInt64(memory.Start + addr + 8, 0); // flags
-		        Marshal.WriteInt64(memory.Start + addr + 16, 0); // rights
-		        Marshal.WriteInt64(memory.Start + addr + 24, 0); // rights inheriting
+            Marshal.WriteInt64(memory.Start + addr, 2); // type = char dev
+            Marshal.WriteInt64(memory.Start + addr + 8, 0); // flags
+            Marshal.WriteInt64(memory.Start + addr + 16, 0); // rights
+            Marshal.WriteInt64(memory.Start + addr + 24, 0); // rights inheriting
         }
         return 0;
     }
 
     public static int fd_write(int fd, int iovs_addr, int iovs_len, int nwritten_addr) { 
-	      dbgmsg(string.Format("{0}, 0x{1:X}, {2}, 0x{3:X}", fd, iovs_addr, iovs_len, nwritten_addr));
-	      string toDisplay = "";
-	      for (int i = 0; i < iovs_len; i++) {
-	          var addr = Marshal.ReadInt32(memory.Start + iovs_addr + (i*2)*4);
-	          var len = Marshal.ReadInt32(memory.Start + iovs_addr + ((i*2)+1)*4);
-	          if (len > 0) {
-		            toDisplay = toDisplay + Marshal.PtrToStringAuto(memory.Start + addr, len);
-	          }
-	      }
-	      Marshal.WriteInt32(memory.Start + nwritten_addr, toDisplay.Length);
-	      Console.WriteLine(".... '{0}'", toDisplay.Replace("\n", "\n.... "));
-	      return 0;
+        dbgmsg(string.Format("{0}, 0x{1:X}, {2}, 0x{3:X}", fd, iovs_addr, iovs_len, nwritten_addr));
+        string toDisplay = "";
+        for (int i = 0; i < iovs_len; i++) {
+            var addr = Marshal.ReadInt32(memory.Start + iovs_addr + (i*2)*4);
+            var len = Marshal.ReadInt32(memory.Start + iovs_addr + ((i*2)+1)*4);
+            if (len > 0) {
+                toDisplay = toDisplay + Marshal.PtrToStringAuto(memory.Start + addr, len);
+            }
+        }
+        Marshal.WriteInt32(memory.Start + nwritten_addr, toDisplay.Length);
+        Console.WriteLine(".... '{0}'", toDisplay.Replace("\n", "\n.... "));
+        return 0;
     }
 
     public static int args_get(int argv_addr, int argv_buf_addr) {
         dbgmsg(string.Format("0x{0:X}, 0x{1:X}", argv_addr, argv_buf_addr));
-        
         int step = 0;
         for (int i = 0; i < argv.Count; i++) {
             var val = Encoding.ASCII.GetBytes(string.Format("{0}\0",argv[i]));
-    	      Marshal.WriteInt32(memory.Start + argv_addr + (i * 4), argv_buf_addr + step);
+            Marshal.WriteInt32(memory.Start + argv_addr + (i * 4), argv_buf_addr + step);
             Marshal.Copy(val, 0, memory.Start + argv_buf_addr + step, val.Length);
             step += val.Length;
         }
-	      return 0;
+        return 0;
     }
 
     public static int args_sizes_get(int argc_addr, int argv_buf_size_addr) {
-	      dbgmsg(string.Format("0x{0:X}, 0x{1:X}", argc_addr, argv_buf_size_addr));
-	      Marshal.WriteInt32(memory.Start + argc_addr, argv.Count);
-	      Marshal.WriteInt32(memory.Start + argv_buf_size_addr, 1024);
-	      return 0;
+        dbgmsg(string.Format("0x{0:X}, 0x{1:X}", argc_addr, argv_buf_size_addr));
+        Marshal.WriteInt32(memory.Start + argc_addr, argv.Count);
+        Marshal.WriteInt32(memory.Start + argv_buf_size_addr, 1024);
+        return 0;
     }
     
     public static int environ_get(int a, int b) { dbgmsg("UNIMPLEMENTED"); return 1; }
 
     public static int environ_sizes_get(int environ_count_addr, int environ_buf_size_addr) {
         dbgmsg(string.Format("0x{0:X}, 0x{1:X}", environ_count_addr, environ_buf_size_addr));
-	      Marshal.WriteInt32(memory.Start + environ_count_addr, 0);
-	      Marshal.WriteInt32(memory.Start + environ_buf_size_addr, 0);
+        Marshal.WriteInt32(memory.Start + environ_count_addr, 0);
+        Marshal.WriteInt32(memory.Start + environ_buf_size_addr, 0);
         return 0;
     }
 
     public static int clock_res_get(int a, int b) { dbgmsg("UNIMPLEMENTED"); return 1; }
 
     public static int clock_time_get(int clock_id, long precision, int result_addr) {
-	      dbgmsg(string.Format("{0}, {1}, 0x{2:X}", clock_id, precision, result_addr));
-	      Marshal.WriteInt64(memory.Start + result_addr, (long)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalMilliseconds) * 1000 * 1000);
-	      return 0;
+        dbgmsg(string.Format("{0}, {1}, 0x{2:X}", clock_id, precision, result_addr));
+        Marshal.WriteInt64(memory.Start + result_addr, (long)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalMilliseconds) * 1000 * 1000);
+        return 0;
     }
 
     public static int fd_advice(int a, long b, long c, int d) { dbgmsg("UNIMPLEMENTED"); return 1; }
@@ -104,8 +103,8 @@ static class Program
     public static int fd_fdstat_set_rights(int a, long b, long c) { dbgmsg("UNIMPLEMENTED"); return 1; }
     
     public static int fd_filestat_get(int fd, int result_addr) {
-	      dbgmsg(string.Format("{0}, 0x{1:X}", fd, result_addr));
-	      return 8; // EBADF
+        dbgmsg(string.Format("{0}, 0x{1:X}", fd, result_addr));
+        return 8; // EBADF
     }
     
     public static int fd_filestat_set_size(int a, long b) { dbgmsg("UNIMPLEMENTED"); return 1; }
@@ -113,22 +112,22 @@ static class Program
     public static int fd_pread(int a, int b, int c, long d, int e) { dbgmsg("UNIMPLEMENTED"); return 1; }
 
     public static int fd_prestat_get(int fd, int addr) { 
-	      dbgmsg(string.Format("{0}, 0x{1:X}", fd, addr));
-	      if (fd == 3) {
-		        Marshal.WriteInt64(memory.Start + addr, 0); // WASI_PREOPENTYPE_DIR
-		        Marshal.WriteInt64(memory.Start + addr + 8, 1);
-		        return 0;
-	      }
-	      return 8; // EBADF
+        dbgmsg(string.Format("{0}, 0x{1:X}", fd, addr));
+        if (fd == 3) {
+            Marshal.WriteInt64(memory.Start + addr, 0); // WASI_PREOPENTYPE_DIR
+            Marshal.WriteInt64(memory.Start + addr + 8, 1);
+            return 0;
+        }
+        return 8; // EBADF
     }
 
     public static int fd_prestat_dir_name(int fd, int path_addr, int len) { 
-	      dbgmsg(string.Format("{0}, 0x{1:X}, {2}", fd, path_addr, len));
-	      if (fd == 3) {
-		        Marshal.WriteByte(memory.Start + path_addr, (byte)'.');
-		        return 0;
-	      }
-	      return 1; 
+        dbgmsg(string.Format("{0}, 0x{1:X}, {2}", fd, path_addr, len));
+        if (fd == 3) {
+            Marshal.WriteByte(memory.Start + path_addr, (byte)'.');
+            return 0;
+        }
+        return 1; 
     }
 
     public static int fd_pwrite(int a, int b, int c, long d, int e) { dbgmsg("UNIMPLEMENTED"); return 1; }
@@ -143,10 +142,10 @@ static class Program
     public static int path_link(int a, int b, int c, int d, int e, int f, int g) { dbgmsg("UNIMPLEMENTED"); return 1; }
     
     public static int path_open(int dir_fd, int dirflags, int path_addr, int path_len, int oflags, long fs_rights_base, long fs_rights_inherit, int fs_flags, int fd_addr) {
-	      dbgmsg(string.Format("{0}, {1}, 0x{2:X}, {3}, {4}, {5}, 0x{6:X}, 0x{7:X}, 0x{8:X}", dir_fd, dirflags, path_addr, path_len, oflags, fs_rights_base, fs_rights_inherit, fs_flags, fd_addr));
-	      var path = Marshal.PtrToStringAuto(memory.Start + path_addr, path_len);
-	      Console.WriteLine("> path is '{0}'", path);
-	      return 1; // TODO
+        dbgmsg(string.Format("{0}, {1}, 0x{2:X}, {3}, {4}, {5}, 0x{6:X}, 0x{7:X}, 0x{8:X}", dir_fd, dirflags, path_addr, path_len, oflags, fs_rights_base, fs_rights_inherit, fs_flags, fd_addr));
+        var path = Marshal.PtrToStringAuto(memory.Start + path_addr, path_len);
+        Console.WriteLine("> path is '{0}'", path);
+        return 1; // TODO
     }
 
     public static int path_readlink(int a, int b, int c, int d, int e, int f) { dbgmsg("UNIMPLEMENTED"); return 1; }
@@ -161,10 +160,10 @@ static class Program
 
     static Random rndgen = new Random();
     public static int random_get(int buf_addr, int buf_len) {
-	      dbgmsg(string.Format("0x{0:X}, {1}", buf_addr, buf_len));
-	      var buf = new byte[buf_len];
-	      rndgen.NextBytes(buf);
-	      Marshal.Copy(buf, 0, memory.Start + buf_addr, buf.Length);
+        dbgmsg(string.Format("0x{0:X}, {1}", buf_addr, buf_len));
+        var buf = new byte[buf_len];
+        rndgen.NextBytes(buf);
+        Marshal.Copy(buf, 0, memory.Start + buf_addr, buf.Length);
         return 0;
     }
 
@@ -227,14 +226,14 @@ static class Program
             { "wasi_unstable", "__dummy__", new FunctionImport(new Action(dummy)) }, // TODO
         };
 
-	      // copy wasi_snapshot_preview1 -> wasi_unstable
-	      foreach (var item in imports["wasi_snapshot_preview1"]) {
-		        imports["wasi_unstable"].Add(item);
-	      }
+        // copy wasi_snapshot_preview1 -> wasi_unstable
+        foreach (var item in imports["wasi_snapshot_preview1"]) {
+            imports["wasi_unstable"].Add(item);
+        }
 
-	      if (args.Length == 0) {
-          Console.WriteLine("Need at least one argument");
-          return 1;
+        if (args.Length == 0) {
+            Console.WriteLine("Need at least one argument");
+            return 1;
         }
 
         argv = new List<string>();
@@ -246,12 +245,12 @@ static class Program
 
         Console.Write(">>>> ");
         Console.ForegroundColor = ConsoleColor.Yellow;
-	      Console.Write("Going to execute ");
+        Console.Write("Going to execute ");
         Console.ForegroundColor = ConsoleColor.Magenta;
         Console.WriteLine(args[0]);
         Console.ResetColor();
 
-	      memory = compiled.Exports.memory;
+        memory = compiled.Exports.memory;
         //compiled.Exports.__wasm_call_ctors();
         compiled.Exports._start();
         return 0;
