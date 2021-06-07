@@ -1,0 +1,11 @@
+{
+  "scripts": {
+    "build": "asc test.ts -b test.wasm -t test.wat --runtime half"
+  },
+  "devDependencies": {
+    "assemblyscript": "0.10.0"
+  },
+  "dependencies": {
+    "as-wasi": "^0.1.1"
+  }
+}
