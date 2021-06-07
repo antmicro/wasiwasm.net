@@ -1,0 +1,3 @@
+[submodule "dotnet-webassembly"]
+	path = dotnet-webassembly
+	url = https://github.com/antmicro/dotnet-webassembly
