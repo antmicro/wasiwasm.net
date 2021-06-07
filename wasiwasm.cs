@@ -243,6 +243,10 @@ static class Program
 
         var compiled = Compile.FromBinary<dynamic>(new FileStream(args[0], FileMode.Open, FileAccess.Read))(imports);
 
+        foreach (var nm in RuntimeImport.FromCompiledExports(compiled.Exports)) {
+            Console.WriteLine(string.Format("---- Export {0}", nm.ToString().Split("(")[1].Split(",")[0]));
+        }
+
         Console.Write(">>>> ");
         Console.ForegroundColor = ConsoleColor.Yellow;
         Console.Write("Going to execute ");
@@ -252,7 +256,12 @@ static class Program
 
         memory = compiled.Exports.memory;
         //compiled.Exports.__wasm_call_ctors();
-        compiled.Exports._start();
+        try {
+            compiled.Exports._start();
+        } catch (Exception ex) {
+            Console.WriteLine(ex.ToString());
+            return 1;
+        }
         return 0;
     }
 
