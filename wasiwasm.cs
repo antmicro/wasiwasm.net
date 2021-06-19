@@ -131,7 +131,33 @@ static class Program
     }
 
     public static int fd_pwrite(int a, int b, int c, long d, int e) { dbgmsg("UNIMPLEMENTED"); return 1; }
-    public static int fd_read(int a, int b, int c, int d) { dbgmsg("UNIMPLEMENTED"); return 1; }
+
+    public static int fd_read(int fd, int iovs_addr, int iovs_len, int nread_addr) {
+        dbgmsg(string.Format("{0}, 0x{1:X}, {2}, 0x{3:X}", fd, iovs_addr, iovs_len, nread_addr));
+        if (fd == 0) {
+            // TODO: stdin
+            return 1;
+        }
+        if (fd < 100) {
+            // stdout, stderr or unknown id
+            return 1;
+        }
+        if ((fd - 100) >= FileDescriptors.Count) {
+            // no such descriptor
+            return 1;
+        }
+        if (!FileDescriptors[fd - 100]) {
+            // already closed
+            return 1;
+        } else {
+            // always read 'd' for now
+            var addr = Marshal.ReadInt32(memory.Start + iovs_addr + (0*2)*4); // TODO
+            Marshal.WriteByte(memory.Start + addr, 0x64); // 'd'
+            Marshal.WriteInt64(memory.Start + nread_addr, 1);
+            return 0;
+        }
+    }
+
     public static int fd_readdir(int a, int b, int c, long d, int e ) { dbgmsg("UNIMPLEMENTED"); return 1; }
     public static int fd_renumber(int a, int b) { dbgmsg("UNIMPLEMENTED"); return 1; }
     public static int fd_sync(int a) { dbgmsg("UNIMPLEMENTED"); return 1; }
@@ -145,7 +171,15 @@ static class Program
         dbgmsg(string.Format("{0}, {1}, 0x{2:X}, {3}, {4}, {5}, 0x{6:X}, 0x{7:X}, 0x{8:X}", dir_fd, dirflags, path_addr, path_len, oflags, fs_rights_base, fs_rights_inherit, fs_flags, fd_addr));
         var path = Marshal.PtrToStringAuto(memory.Start + path_addr, path_len);
         Console.WriteLine("> path is '{0}'", path);
-        return 1; // TODO
+        if (File.Exists(path)) {
+          Console.WriteLine("> path exists!");
+          FileDescriptors.Add(true);
+          Marshal.WriteInt64(memory.Start + fd_addr, 100 + FileDescriptors.Count - 1);
+          return 0;
+        } else {
+          Marshal.WriteInt64(memory.Start + fd_addr, 0);
+          return 1;
+        }
     }
 
     public static int path_readlink(int a, int b, int c, int d, int e, int f) { dbgmsg("UNIMPLEMENTED"); return 1; }
@@ -173,8 +207,12 @@ static class Program
 
     public static void dummy() { }
 
+    static List<bool> FileDescriptors;
+
     static int Main(string[] args)
     {
+        FileDescriptors = new List<bool>();
+
         var imports = new ImportDictionary
         {
             { "wasi_snapshot_preview1", "args_get", new FunctionImport(new Func<int, int, int>(args_get)) },
