@@ -22,7 +22,10 @@ using System.Diagnostics;
 
 static class Program
 {
+    public static bool debug = false;
+
     public static void dbgmsg(string msg) {
+        if (!debug) return;
         Console.Write(">>>> ");
         Console.ForegroundColor = ConsoleColor.Yellow;
         Console.Write("{0}", new StackFrame(1).GetMethod().ToString().Replace("Int32", "i32").Replace("Int64", "i64").Replace("Void", "void"));
@@ -56,7 +59,11 @@ static class Program
             }
         }
         Marshal.WriteInt32(memory.Start + nwritten_addr, toDisplay.Length);
-        Console.WriteLine(".... '{0}'", toDisplay.Replace("\n", "\n.... "));
+        if (debug) {
+            Console.WriteLine(".... '{0}'", toDisplay.Replace("\n", "\n.... "));
+        } else {
+            Console.Write(toDisplay);
+        }
         return 0;
     }
 
@@ -140,23 +147,24 @@ static class Program
 
     public static int fd_read(int fd, int iovs_addr, int iovs_len, int nread_addr) {
         dbgmsg(string.Format("{0}, 0x{1:X}, {2}, 0x{3:X}", fd, iovs_addr, iovs_len, nread_addr));
-        if (fd == 0) {
-            // TODO: stdin
-            return 1;
-        }
-        if (fd < 100) {
+        if ((fd > 0) && (fd < 100)) {
             // stdout, stderr or unknown id
             return 1;
-        }
-        if ((fd - 100) >= FileDescriptors.Count) {
-            // no such descriptor
-            return 1;
-        }
-        if (FileDescriptors[fd - 100] == null) {
-            // already closed
-            return 1;
         } else {
-            var file = FileDescriptors[fd - 100];
+            Stream file;
+            if (fd >= 100) {
+                if ((fd - 100) >= FileDescriptors.Count) {
+                    // no such descriptor
+                    return 1;
+                }
+                if (FileDescriptors[fd - 100] == null) {
+                    // closed?
+                    return 1;
+                }
+                file = FileDescriptors[fd - 100];
+            } else if (fd == 0) {
+                file = Console.OpenStandardInput();
+            } else return 1;
             int nread = 0;
             for (int i = 0; i < iovs_len; i++) {
                 var addr = Marshal.ReadInt32(memory.Start + iovs_addr + (i*2)*4);
@@ -185,7 +193,6 @@ static class Program
         dbgmsg(string.Format("{0}, {1}, 0x{2:X}, {3}, {4}, {5}, 0x{6:X}, 0x{7:X}, 0x{8:X}", dir_fd, dirflags, path_addr, path_len, oflags, fs_rights_base, fs_rights_inherit, fs_flags, fd_addr));
         var path = Marshal.PtrToStringAuto(memory.Start + path_addr, path_len);
         if (File.Exists(path)) {
-          Console.WriteLine("fs_flags = {0:X}", fs_flags); // TODO
           FileStream file = File.Open(path, FileMode.Open);
           FileDescriptors.Add(file);
           Marshal.WriteInt64(memory.Start + fd_addr, 100 + FileDescriptors.Count - 1);
@@ -296,16 +303,17 @@ static class Program
 
         var compiled = Compile.FromBinary<dynamic>(new FileStream(args[0], FileMode.Open, FileAccess.Read))(imports);
 
-        foreach (var nm in RuntimeImport.FromCompiledExports(compiled.Exports)) {
+        if (debug) foreach (var nm in RuntimeImport.FromCompiledExports(compiled.Exports)) {
             Console.WriteLine(string.Format("---- Export {0}", nm.ToString().Split("(")[1].Split(",")[0]));
         }
-
-        Console.Write(">>>> ");
-        Console.ForegroundColor = ConsoleColor.Yellow;
-        Console.Write("Going to execute ");
-        Console.ForegroundColor = ConsoleColor.Magenta;
-        Console.WriteLine(args[0]);
-        Console.ResetColor();
+        if (debug) {
+            Console.Write(">>>> ");
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.Write("Going to execute ");
+            Console.ForegroundColor = ConsoleColor.Magenta;
+            Console.WriteLine(args[0]);
+            Console.ResetColor();
+        }
 
         memory = compiled.Exports.memory;
         //compiled.Exports.__wasm_call_ctors();
