@@ -75,11 +75,17 @@ static class Program
     public static int args_sizes_get(int argc_addr, int argv_buf_size_addr) {
         dbgmsg(string.Format("0x{0:X}, 0x{1:X}", argc_addr, argv_buf_size_addr));
         Marshal.WriteInt32(memory.Start + argc_addr, argv.Count);
-        Marshal.WriteInt32(memory.Start + argv_buf_size_addr, 1024);
+        int len = 0;
+        for (int i = 0; i < argv.Count; i++) len += Encoding.ASCII.GetBytes(string.Format("{0}\0", argv[i])).Length;
+        Marshal.WriteInt32(memory.Start + argv_buf_size_addr, len);
         return 0;
     }
     
-    public static int environ_get(int a, int b) { dbgmsg("UNIMPLEMENTED"); return 1; }
+    public static int environ_get(int environ_addr, int environ_buf_addr) {
+        // TODO
+        dbgmsg(string.Format("0x{0:X}, 0x{1:X}", environ_addr, environ_buf_addr));
+        return 0;
+    }
 
     public static int environ_sizes_get(int environ_count_addr, int environ_buf_size_addr) {
         dbgmsg(string.Format("0x{0:X}, 0x{1:X}", environ_count_addr, environ_buf_size_addr));
@@ -112,7 +118,7 @@ static class Program
     public static int fd_pread(int a, int b, int c, long d, int e) { dbgmsg("UNIMPLEMENTED"); return 1; }
 
     public static int fd_prestat_get(int fd, int addr) { 
-        dbgmsg(string.Format("{0}, 0x{1:X}", fd, addr));
+        dbgmsg(string.Format("fd={0}, addr=0x{1:X}", fd, addr));
         if (fd == 3) {
             Marshal.WriteInt64(memory.Start + addr, 0); // WASI_PREOPENTYPE_DIR
             Marshal.WriteInt64(memory.Start + addr + 8, 1);
@@ -122,7 +128,7 @@ static class Program
     }
 
     public static int fd_prestat_dir_name(int fd, int path_addr, int len) { 
-        dbgmsg(string.Format("{0}, 0x{1:X}, {2}", fd, path_addr, len));
+        dbgmsg(string.Format("fd={0}, path_addr=0x{1:X}, len={2}", fd, path_addr, len));
         if (fd == 3) {
             Marshal.WriteByte(memory.Start + path_addr, (byte)'.');
             return 0;
@@ -146,14 +152,22 @@ static class Program
             // no such descriptor
             return 1;
         }
-        if (!FileDescriptors[fd - 100]) {
+        if (FileDescriptors[fd - 100] == null) {
             // already closed
             return 1;
         } else {
-            // always read 'd' for now
-            var addr = Marshal.ReadInt32(memory.Start + iovs_addr + (0*2)*4); // TODO
-            Marshal.WriteByte(memory.Start + addr, 0x64); // 'd'
-            Marshal.WriteInt64(memory.Start + nread_addr, 1);
+            var file = FileDescriptors[fd - 100];
+            int nread = 0;
+            for (int i = 0; i < iovs_len; i++) {
+                var addr = Marshal.ReadInt32(memory.Start + iovs_addr + (i*2)*4);
+                var len = Marshal.ReadInt32(memory.Start + iovs_addr + (i*2+1)*4);
+                if ((i+1) == iovs_len) if (len == 1024) len = 1;
+                byte[] c = new byte[len];
+                int reallen = file.Read(c, 0, len);
+                for (int j = 0; j < reallen; j++) Marshal.WriteByte(memory.Start + addr + j, c[j]);
+                nread += reallen;
+            }
+            Marshal.WriteInt32(memory.Start + nread_addr, nread);
             return 0;
         }
     }
@@ -170,13 +184,14 @@ static class Program
     public static int path_open(int dir_fd, int dirflags, int path_addr, int path_len, int oflags, long fs_rights_base, long fs_rights_inherit, int fs_flags, int fd_addr) {
         dbgmsg(string.Format("{0}, {1}, 0x{2:X}, {3}, {4}, {5}, 0x{6:X}, 0x{7:X}, 0x{8:X}", dir_fd, dirflags, path_addr, path_len, oflags, fs_rights_base, fs_rights_inherit, fs_flags, fd_addr));
         var path = Marshal.PtrToStringAuto(memory.Start + path_addr, path_len);
-        Console.WriteLine("> path is '{0}'", path);
         if (File.Exists(path)) {
-          Console.WriteLine("> path exists!");
-          FileDescriptors.Add(true);
+          Console.WriteLine("fs_flags = {0:X}", fs_flags); // TODO
+          FileStream file = File.Open(path, FileMode.Open);
+          FileDescriptors.Add(file);
           Marshal.WriteInt64(memory.Start + fd_addr, 100 + FileDescriptors.Count - 1);
           return 0;
         } else {
+          Console.WriteLine("Path {0} does not exist", path);
           Marshal.WriteInt64(memory.Start + fd_addr, 0);
           return 1;
         }
@@ -207,11 +222,11 @@ static class Program
 
     public static void dummy() { }
 
-    static List<bool> FileDescriptors;
+    static List<FileStream> FileDescriptors;
 
     static int Main(string[] args)
     {
-        FileDescriptors = new List<bool>();
+        FileDescriptors = new List<FileStream>();
 
         var imports = new ImportDictionary
         {

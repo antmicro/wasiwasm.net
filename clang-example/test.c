@@ -12,14 +12,16 @@ int main(int argc, char ** argv) {
 	printf("got ptr = %p\n", f);
 
 	if (f) {
-            char buf[1];
-            printf("fread is going to happen!\n");
-            fread(buf, 1, 1, f);
-            printf("fread happened!\n");
-            printf("read a byte = %c\n", buf[0]);
+            while (1) {
+                char buf[128];
+                int nread = fread(buf, 1, 128, f);
+                for (int j = 0; j < nread; j++) printf("%c", buf[j]);
+                if (nread < 128) break;
+            }
 	} else {
 		printf("Error opening file, ptr is NULL!\n");
 	}
+        printf("\n ================ \n");
 	printf("end of main!\n");
 }
 
