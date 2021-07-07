@@ -210,7 +210,12 @@ static class Program
     public static int path_symlink(int a, int b, int c, int d, int e) { dbgmsg("UNIMPLEMENTED"); return 1; }
     public static int path_unlink_file(int a, int b, int c) { dbgmsg("UNIMPLEMENTED"); return 1; }
     public static int poll_oneoff(int a, int b, int c, int d) { dbgmsg("UNIMPLEMENTED"); return 1; }
-    public static void proc_exit(int a) { dbgmsg("UNIMPLEMENTED"); }
+    
+    public static void proc_exit(int exit_code) {
+        dbgmsg(string.Format("{0}", exit_code));
+        Environment.Exit(exit_code);
+    }
+    
     public static int proc_raise(int a) { dbgmsg("UNIMPLEMENTED"); return 1; }
     public static int sched_yield() { dbgmsg("UNIMPLEMENTED"); return 1; }
 
