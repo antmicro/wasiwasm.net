@@ -42,7 +42,7 @@ static class Program
         if (fd <= 2) { // stdin,out,err
             Marshal.WriteInt64(memory.Start + addr, 2); // type = char dev
             Marshal.WriteInt64(memory.Start + addr + 8, 0); // flags
-            Marshal.WriteInt64(memory.Start + addr + 16, 0); // rights
+            Marshal.WriteInt64(memory.Start + addr + 16, 0); // rights   // TODO
             Marshal.WriteInt64(memory.Start + addr + 24, 0); // rights inheriting
         }
         return 0;
@@ -169,7 +169,6 @@ static class Program
             for (int i = 0; i < iovs_len; i++) {
                 var addr = Marshal.ReadInt32(memory.Start + iovs_addr + (i*2)*4);
                 var len = Marshal.ReadInt32(memory.Start + iovs_addr + (i*2+1)*4);
-                if ((i+1) == iovs_len) if (len == 1024) len = 1;
                 byte[] c = new byte[len];
                 int reallen = file.Read(c, 0, len);
                 for (int j = 0; j < reallen; j++) Marshal.WriteByte(memory.Start + addr + j, c[j]);
