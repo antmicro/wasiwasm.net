@@ -184,7 +184,27 @@ static class Program
     public static int fd_sync(int a) { dbgmsg("UNIMPLEMENTED"); return 1; }
     public static int fd_tell(int a, int b) { dbgmsg("UNIMPLEMENTED"); return 1; }
     public static int path_create_directory(int a, int b, int c) { dbgmsg("UNIMPLEMENTED"); return 1; }
-    public static int path_filestat_get(int a, int b, int c, int d, int e) { dbgmsg("UNIMPLEMENTED"); return 1; }
+
+    public static int path_filestat_get(int fd, int flags, int path_addr, int path_len, int buf_addr) {
+        dbgmsg(string.Format("{0}, {1}, 0x{2:X}, {3}, 0x{4:X}", fd, flags, path_addr, path_len, buf_addr));
+        if (fd <= 2) {
+            return 1;
+        }
+        var path = Marshal.PtrToStringAuto(memory.Start + path_addr, path_len);
+        if (path == ".") {
+            Marshal.WriteInt64(memory.Start + buf_addr + 0 , 0); // dev
+            Marshal.WriteInt64(memory.Start + buf_addr + 8 , 0); // ino
+            Marshal.WriteInt64(memory.Start + buf_addr + 16, 3); // file type  (3--dir)
+            Marshal.WriteInt64(memory.Start + buf_addr + 24, 0); // nlink
+            Marshal.WriteInt64(memory.Start + buf_addr + 32, 0); // size
+            Marshal.WriteInt64(memory.Start + buf_addr + 40, 0); // atim
+            Marshal.WriteInt64(memory.Start + buf_addr + 48, 0); // mtim
+            Marshal.WriteInt64(memory.Start + buf_addr + 56, 0); // ctim
+            return 0;
+        }
+        return 1;
+    }
+
     public static int path_filestat_set_times(int a, int b, int c, int d, long e, long f, int g) { dbgmsg("UNIMPLEMENTED"); return 1; }
     public static int path_link(int a, int b, int c, int d, int e, int f, int g) { dbgmsg("UNIMPLEMENTED"); return 1; }
     
